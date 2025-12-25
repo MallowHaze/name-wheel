@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Namn-snurran</title>
+<title>Wheel - Spin</title>
 <style>
   body {
     font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
@@ -27,6 +27,7 @@
     height: auto;
     max-width: 420px;
     border-radius: 16px;
+    touch-action: manipulation; /* makes tapping feel better on mobile */
   }
 
   .btnRow {
@@ -35,6 +36,355 @@
     justify-content: center;
     margin-top: 16px;
     flex-wrap: wrap;
+  }
+
+  button {
+    font-size: 18px;
+    padding: 12px 18px;
+    border: 0;
+    border-radius: 14px;
+    cursor: pointer;
+  }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+  .smallBtn { font-size: 14px; padding: 10px 14px; }
+
+  .result { margin-top: 12px; font-size: 18px; min-height: 1.4em; }
+
+  #editor {
+    display: none;
+    margin-top: 14px;
+    text-align: left;
+  }
+  #editorCard {
+    border: 1px solid #ddd;
+    border-radius: 14px;
+    padding: 14px;
+  }
+  textarea {
+    width: 100%;
+    font-size: 16px;
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+    resize: vertical;
+  }
+  .hint {
+    font-size: 13px;
+    opacity: 0.8;
+    margin-top: 8px;
+    line-height: 1.35;
+  }
+</style>
+</head>
+
+<body>
+  <div class="wrap">
+    <h1>🎡 Wheel - Spin</h1>
+
+    <div class="pointer"></div>
+    <canvas id="wheel" width="420" height="420" aria-label="Wheel"></canvas>
+
+    <div class="btnRow">
+      <button id="spinBtn">Snurra</button>
+      <button class="smallBtn" id="editBtn">Redigera namn</button>
+      <button class="smallBtn" id="resetBtn">Återställ</button>
+    </div>
+
+    <div class="result" id="result"></div>
+
+    <div id="editor">
+      <div id="editorCard">
+        <div style="font-weight: 600; margin-bottom: 8px;">Redigera namn (ett per rad)</div>
+        <textarea id="nameInput" rows="8" spellcheck="false"></textarea>
+
+        <div class="btnRow" style="justify-content:flex-start; margin-top:12px;">
+          <button class="smallBtn" id="saveBtn">Spara</button>
+          <button class="smallBtn" id="cancelBtn">Avbryt</button>
+        </div>
+
+        <div class="hint">
+          • Max 8 namn.<br/>
+          • Tomma rader ignoreras.<br/>
+          • Namnen sparas på den här enheten automatiskt.<br/>
+          • Minst 2 namn krävs.<br/>
+          • Du kan också trycka på mitten av hjulet för att snurra.
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // =============================
+  // INSTÄLLNINGAR
+  // =============================
+  const DEFAULT_NAMES = ["Oliwia", "Wilmer", "Wenche", "Håkan", "Markus"];
+  const MAX_NAMES = 8;
+
+  // =============================
+  // TEKNIK
+  // =============================
+  const COLORS = ["#ef4444","#3b82f6","#22c55e","#f59e0b","#a855f7","#06b6d4","#f97316","#84cc16"];
+  const STORAGE_KEY = "wheelNames_v4_sv";
+
+  const canvas = document.getElementById("wheel");
+  const ctx = canvas.getContext("2d");
+
+  const spinBtn = document.getElementById("spinBtn");
+  const editBtn = document.getElementById("editBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const resultEl = document.getElementById("result");
+
+  const editor = document.getElementById("editor");
+  const nameInput = document.getElementById("nameInput");
+  const saveBtn = document.getElementById("saveBtn");
+  const cancelBtn = document.getElementById("cancelBtn");
+
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const r  = Math.min(cx, cy) - 10;
+
+  // 0 rad = klockan 3. Pilen sitter vid klockan 12.
+  const POINTER_ANGLE = -Math.PI / 2;
+  const CENTER_RADIUS = 44; // must match drawWheel center circle
+
+  let names = loadNames();
+  let currentAngle = initialAngle();
+  let spinning = false;
+
+  function loadNames() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      let list = raw ? JSON.parse(raw) : DEFAULT_NAMES;
+      if (!Array.isArray(list)) list = DEFAULT_NAMES;
+
+      list = list
+        .map(x => String(x).trim())
+        .filter(Boolean)
+        .slice(0, MAX_NAMES);
+
+      if (list.length < 2) return [...DEFAULT_NAMES];
+      return list;
+    } catch {
+      return [...DEFAULT_NAMES];
+    }
+  }
+
+  function saveNamesToStorage(list) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  }
+
+  function count() { return names.length; }
+
+  function sliceSize() {
+    return (2 * Math.PI) / count();
+  }
+
+  function initialAngle() {
+    const slice = sliceSize();
+    return POINTER_ANGLE - slice / 2;
+  }
+
+  function drawWheel(angle = 0) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const n = count();
+    const slice = sliceSize();
+
+    for (let i = 0; i < n; i++) {
+      const start = angle + i * slice;
+      const end   = start + slice;
+
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, start, end);
+      ctx.closePath();
+      ctx.fillStyle = COLORS[i % COLORS.length];
+      ctx.fill();
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(start + slice / 2);
+      ctx.textAlign = "right";
+      ctx.fillStyle = "white";
+
+      const fontSize = n >= 10 ? 13 : 16;
+      ctx.font = `${fontSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+      ctx.fillText(names[i], r - 18, 6);
+      ctx.restore();
+    }
+
+    // Center circle
+    ctx.beginPath();
+    ctx.arc(cx, cy, CENTER_RADIUS, 0, 2 * Math.PI);
+    ctx.fillStyle = "white";
+    ctx.fill();
+
+    ctx.font = "14px system-ui";
+    ctx.fillStyle = "#111";
+    ctx.textAlign = "center";
+    ctx.fillText("SNURRA", cx, cy + 5);
+  }
+
+  function mod2pi(x) {
+    const two = 2 * Math.PI;
+    return ((x % two) + two) % two;
+  }
+
+  function indexAtPointer(angle) {
+    const slice = sliceSize();
+    const rel = mod2pi(POINTER_ANGLE - angle);
+    return Math.floor(rel / slice);
+  }
+
+  function pickWinner(angle) {
+    const idx = indexAtPointer(angle);
+    return names[idx];
+  }
+
+  function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+  function setUIBusy(isBusy) {
+    spinBtn.disabled = isBusy;
+    editBtn.disabled = isBusy;
+    resetBtn.disabled = isBusy;
+  }
+
+  function spin() {
+    if (spinning) return;
+
+    if (names.length < 2) {
+      alert("Lägg till minst två namn.");
+      return;
+    }
+
+    spinning = true;
+    setUIBusy(true);
+    resultEl.textContent = "";
+
+    const startAngle = currentAngle;
+
+    const extraTurns = 6 + Math.random() * 4;
+    const randomOffset = Math.random() * 2 * Math.PI;
+    const targetAngle = startAngle + extraTurns * 2 * Math.PI + randomOffset;
+
+    const duration = 3600;
+    const start = performance.now();
+
+    function frame(now) {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = easeOutCubic(t);
+      currentAngle = startAngle + (targetAngle - startAngle) * eased;
+      drawWheel(currentAngle);
+
+      if (t < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        const winner = pickWinner(currentAngle);
+        resultEl.textContent = "🎉 Vinnare: " + winner;
+
+        spinning = false;
+        setUIBusy(false);
+      }
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  // ====== Editor ======
+  function openEditor() {
+    nameInput.value = names.join("\n");
+    editor.style.display = "block";
+    resultEl.textContent = "";
+    editor.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function closeEditor() {
+    editor.style.display = "none";
+  }
+
+  function saveFromEditor() {
+    let newNames = nameInput.value
+      .split("\n")
+      .map(n => n.trim())
+      .filter(Boolean);
+
+    const unique = [];
+    for (const n of newNames) {
+      if (!unique.includes(n)) unique.push(n);
+    }
+
+    unique.splice(MAX_NAMES);
+
+    if (unique.length < 2) {
+      alert("Skriv minst två namn.");
+      return;
+    }
+
+    names = unique;
+    saveNamesToStorage(names);
+    currentAngle = initialAngle();
+
+    closeEditor();
+    drawWheel(currentAngle);
+  }
+
+  function resetNames() {
+    names = [...DEFAULT_NAMES].slice(0, MAX_NAMES);
+    saveNamesToStorage(names);
+    currentAngle = initialAngle();
+
+    closeEditor();
+    resultEl.textContent = "";
+    drawWheel(currentAngle);
+  }
+
+  // ====== Tap center to spin ======
+  function canvasPointerPosition(evt) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+    const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+
+    // scale from CSS pixels to canvas pixels
+    const x = (clientX - rect.left) * (canvas.width / rect.width);
+    const y = (clientY - rect.top)  * (canvas.height / rect.height);
+    return { x, y };
+  }
+
+  function isInCenter(x, y) {
+    const dx = x - cx;
+    const dy = y - cy;
+    return Math.sqrt(dx*dx + dy*dy) <= CENTER_RADIUS;
+  }
+
+  function handleCanvasTap(evt) {
+    // Only spin if tapping the center circle
+    const { x, y } = canvasPointerPosition(evt);
+    if (isInCenter(x, y)) {
+      evt.preventDefault();
+      spin();
+    }
+  }
+
+  // Bind buttons
+  spinBtn.addEventListener("click", spin);
+  editBtn.addEventListener("click", () => {
+    if (editor.style.display === "none") openEditor();
+    else closeEditor();
+  });
+  resetBtn.addEventListener("click", resetNames);
+  saveBtn.addEventListener("click", saveFromEditor);
+  cancelBtn.addEventListener("click", closeEditor);
+
+  // Bind center-tap (works on touch + mouse)
+  canvas.addEventListener("click", handleCanvasTap);
+  canvas.addEventListener("touchstart", handleCanvasTap, { passive: false });
+
+  // Initial draw
+  drawWheel(currentAngle);
+</script>
+</body>
+</html>    flex-wrap: wrap;
   }
 
   button {
