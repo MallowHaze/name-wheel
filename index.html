@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sv">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Name Wheel</title>
+<title>Namn-snurran</title>
 <style>
   body {
     font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
@@ -45,7 +45,6 @@
     cursor: pointer;
   }
   button:disabled { opacity: .55; cursor: not-allowed; }
-
   .smallBtn { font-size: 14px; padding: 10px 14px; }
 
   .result { margin-top: 12px; font-size: 18px; min-height: 1.4em; }
@@ -80,55 +79,55 @@
 
 <body>
   <div class="wrap">
-    <h1>🎡 Name Picker</h1>
+    <h1>🎡 Namn-snurran</h1>
 
     <div class="pointer"></div>
     <canvas id="wheel" width="420" height="420"></canvas>
 
     <div class="btnRow">
-      <button id="spinBtn">Spin</button>
-      <button class="smallBtn" id="editBtn">Edit names</button>
-      <button class="smallBtn" id="resetBtn">Reset</button>
+      <button id="spinBtn">Snurra</button>
+      <button class="smallBtn" id="editBtn">Redigera namn</button>
+      <button class="smallBtn" id="resetBtn">Återställ</button>
     </div>
 
     <div class="result" id="result"></div>
 
-    <!-- Editor -->
     <div id="editor">
       <div id="editorCard">
-        <div style="font-weight: 600; margin-bottom: 8px;">Edit names (one per line)</div>
-        <textarea id="nameInput" rows="6" spellcheck="false"></textarea>
+        <div style="font-weight: 600; margin-bottom: 8px;">Redigera namn (ett per rad)</div>
+        <textarea id="nameInput" rows="8" spellcheck="false"></textarea>
 
         <div class="btnRow" style="justify-content:flex-start; margin-top:12px;">
-          <button class="smallBtn" id="saveBtn">Save</button>
-          <button class="smallBtn" id="cancelBtn">Cancel</button>
+          <button class="smallBtn" id="saveBtn">Spara</button>
+          <button class="smallBtn" id="cancelBtn">Avbryt</button>
         </div>
 
         <div class="hint">
-          • Names are saved on this device automatically.<br/>
-          • Use “Reset” to restore the original list.<br/>
-          • You need at least 2 names.
+          • Max 8 namn.<br/>
+          • Tomma rader ignoreras.<br/>
+          • Namnen sparas på den här enheten automatiskt.<br/>
+          • Minst 2 namn krävs.
         </div>
       </div>
     </div>
   </div>
 
 <script>
-  // ====== DEFAULT (your original list) ======
+  // =============================
+  // INSTÄLLNINGAR
+  // =============================
   const DEFAULT_NAMES = ["Oliwia", "Wilmer", "Wenche", "Håkan", "Markus"];
+  const MAX_NAMES = 8;
 
-  // Color palette (repeats automatically if you add more names)
+  // =============================
+  // TEKNIK
+  // =============================
   const COLORS = ["#ef4444","#3b82f6","#22c55e","#f59e0b","#a855f7","#06b6d4","#f97316","#84cc16"];
+  const STORAGE_KEY = "wheelNames_v3_sv";
 
-  // LocalStorage key (so edits persist on the device)
-  const STORAGE_KEY = "wheelNames_v1";
-
-  // Load names from device storage, or use default.
-  let names = loadNames();
-
-  // Canvas setup
   const canvas = document.getElementById("wheel");
   const ctx = canvas.getContext("2d");
+
   const spinBtn = document.getElementById("spinBtn");
   const editBtn = document.getElementById("editBtn");
   const resetBtn = document.getElementById("resetBtn");
@@ -141,18 +140,28 @@
 
   const cx = canvas.width / 2;
   const cy = canvas.height / 2;
-  const r = Math.min(cx, cy) - 10;
+  const r  = Math.min(cx, cy) - 10;
 
-  let currentAngle = 0; // radians
+  // Canvas vinkel: 0 radianer = klockan 3. Pilen sitter vid klockan 12.
+  const POINTER_ANGLE = -Math.PI / 2;
+
+  let names = loadNames();            // real, filled names only
+  let currentAngle = initialAngle();  // start aligned nicely
   let spinning = false;
 
   function loadNames() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return [...DEFAULT_NAMES];
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed) || parsed.length < 2) return [...DEFAULT_NAMES];
-      return parsed.map(x => String(x)).filter(Boolean);
+      let list = raw ? JSON.parse(raw) : DEFAULT_NAMES;
+      if (!Array.isArray(list)) list = DEFAULT_NAMES;
+
+      list = list
+        .map(x => String(x).trim())
+        .filter(Boolean)
+        .slice(0, MAX_NAMES);
+
+      if (list.length < 2) return [...DEFAULT_NAMES];
+      return list;
     } catch {
       return [...DEFAULT_NAMES];
     }
@@ -162,18 +171,27 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   }
 
+  function count() { return names.length; }
+
   function sliceSize() {
-    return (2 * Math.PI) / names.length;
+    return (2 * Math.PI) / count();
+  }
+
+  function initialAngle() {
+    // Put first segment centered under pointer at start
+    const slice = sliceSize();
+    return POINTER_ANGLE - slice / 2;
   }
 
   function drawWheel(angle = 0) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    const n = count();
     const slice = sliceSize();
 
-    for (let i = 0; i < names.length; i++) {
+    for (let i = 0; i < n; i++) {
       const start = angle + i * slice;
-      const end = start + slice;
+      const end   = start + slice;
 
       // Wedge
       ctx.beginPath();
@@ -189,7 +207,9 @@
       ctx.rotate(start + slice / 2);
       ctx.textAlign = "right";
       ctx.fillStyle = "white";
-      ctx.font = "16px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+
+      const fontSize = n >= 10 ? 13 : 16;
+      ctx.font = `${fontSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
       ctx.fillText(names[i], r - 18, 6);
       ctx.restore();
     }
@@ -203,14 +223,23 @@
     ctx.font = "14px system-ui";
     ctx.fillStyle = "#111";
     ctx.textAlign = "center";
-    ctx.fillText("SPIN", cx, cy + 5);
+    ctx.fillText("SNURRA", cx, cy + 5);
+  }
+
+  function mod2pi(x) {
+    const two = 2 * Math.PI;
+    return ((x % two) + two) % two;
+  }
+
+  function indexAtPointer(angle) {
+    // Pointer at POINTER_ANGLE, wheel rotated by angle
+    const slice = sliceSize();
+    const rel = mod2pi(POINTER_ANGLE - angle);
+    return Math.floor(rel / slice);
   }
 
   function pickWinner(angle) {
-    // Pointer is at top (12 o’clock). Convert angle to index.
-    const slice = sliceSize();
-    const a = (2 * Math.PI - (angle % (2 * Math.PI)) + (slice / 2)) % (2 * Math.PI);
-    const idx = Math.floor(a / slice) % names.length;
+    const idx = indexAtPointer(angle);
     return names[idx];
   }
 
@@ -223,18 +252,25 @@
   }
 
   function spin() {
-    if (spinning || names.length < 2) return;
+    if (spinning) return;
+
+    if (names.length < 2) {
+      alert("Lägg till minst två namn.");
+      return;
+    }
 
     spinning = true;
     setUIBusy(true);
     resultEl.textContent = "";
 
     const startAngle = currentAngle;
+
+    // Random spin target
     const extraTurns = 6 + Math.random() * 4; // 6–10 turns
     const randomOffset = Math.random() * 2 * Math.PI;
     const targetAngle = startAngle + extraTurns * 2 * Math.PI + randomOffset;
 
-    const duration = 3600; // ms
+    const duration = 3600;
     const start = performance.now();
 
     function frame(now) {
@@ -247,7 +283,8 @@
         requestAnimationFrame(frame);
       } else {
         const winner = pickWinner(currentAngle);
-        resultEl.textContent = "🎉 Selected: " + winner;
+        resultEl.textContent = "🎉 Vald: " + winner;
+
         spinning = false;
         setUIBusy(false);
       }
@@ -256,12 +293,11 @@
     requestAnimationFrame(frame);
   }
 
-  // ====== Editor logic ======
+  // ====== Editor ======
   function openEditor() {
     nameInput.value = names.join("\n");
     editor.style.display = "block";
     resultEl.textContent = "";
-    // scroll into view on mobile
     editor.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -270,37 +306,43 @@
   }
 
   function saveFromEditor() {
-    const newNames = nameInput.value
+    let newNames = nameInput.value
       .split("\n")
       .map(n => n.trim())
       .filter(Boolean);
 
-    // Dedupe optional (prevents exact duplicates)
+    // Dedupe exact duplicates
     const unique = [];
     for (const n of newNames) {
       if (!unique.includes(n)) unique.push(n);
     }
 
+    unique.splice(MAX_NAMES); // limit to 8
+
     if (unique.length < 2) {
-      alert("Please enter at least two names.");
+      alert("Skriv minst två namn.");
       return;
     }
 
     names = unique;
     saveNamesToStorage(names);
+    currentAngle = initialAngle();
+
     closeEditor();
     drawWheel(currentAngle);
   }
 
   function resetNames() {
-    names = [...DEFAULT_NAMES];
+    names = [...DEFAULT_NAMES].slice(0, MAX_NAMES);
     saveNamesToStorage(names);
+    currentAngle = initialAngle();
+
     closeEditor();
     resultEl.textContent = "";
     drawWheel(currentAngle);
   }
 
-  // Bind buttons
+  // Bind
   spinBtn.addEventListener("click", spin);
   editBtn.addEventListener("click", () => {
     if (editor.style.display === "none") openEditor();
