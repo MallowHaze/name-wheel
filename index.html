@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Name Wheel</title>
+<style>
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; text-align: center; padding: 24px; }
+  .wrap { max-width: 520px; margin: 0 auto; }
+  h1 { margin: 0 0 12px; }
+  canvas { width: 100%; height: auto; max-width: 420px; border-radius: 16px; }
+  .pointer { width: 0; height: 0; border-left: 14px solid transparent; border-right: 14px solid transparent; border-bottom: 22px solid #111; margin: 14px auto 6px; }
+  button { font-size: 18px; padding: 12px 20px; border: 0; border-radius: 14px; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .result { margin-top: 12px; font-size: 18px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>🎡 Name Picker</h1>
+    <div class="pointer"></div>
+    <canvas id="wheel" width="420" height="420"></canvas>
+    <div style="margin-top:16px;">
+      <button id="spinBtn">Spin</button>
+    </div>
+    <div class="result" id="result"></div>
+  </div>
+
+<script>
+  // Locked list (no one needs to edit anything)
+  const names = ["Oliwia", "Wilmer", "Wenche", "Håkan", "Markus"];
+
+  // Simple color palette (auto repeats if needed)
+  const colors = ["#ef4444","#3b82f6","#22c55e","#f59e0b","#a855f7"];
+
+  const canvas = document.getElementById("wheel");
+  const ctx = canvas.getContext("2d");
+  const spinBtn = document.getElementById("spinBtn");
+  const resultEl = document.getElementById("result");
+
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const r = Math.min(cx, cy) - 10;
+  const slice = (2 * Math.PI) / names.length;
+
+  let currentAngle = 0;       // radians
+  let spinning = false;
+
+  function drawWheel(angle = 0) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    for (let i = 0; i < names.length; i++) {
+      const start = angle + i * slice;
+      const end = start + slice;
+
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, start, end);
+      ctx.closePath();
+      ctx.fillStyle = colors[i % colors.length];
+      ctx.fill();
+
+      // Text
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(start + slice / 2);
+      ctx.textAlign = "right";
+      ctx.fillStyle = "white";
+      ctx.font = "16px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+      ctx.fillText(names[i], r - 18, 6);
+      ctx.restore();
+    }
+
+    // Center circle
+    ctx.beginPath();
+    ctx.arc(cx, cy, 42, 0, 2 * Math.PI);
+    ctx.fillStyle = "white";
+    ctx.fill();
+    ctx.font = "14px system-ui";
+    ctx.fillStyle = "#111";
+    ctx.textAlign = "center";
+    ctx.fillText("SPIN", cx, cy + 5);
+  }
+
+  function pickWinner(angle) {
+    // Pointer is at top (12 o’clock). Convert angle to index.
+    const a = (2 * Math.PI - (angle % (2 * Math.PI)) + (slice / 2)) % (2 * Math.PI);
+    const idx = Math.floor(a / slice) % names.length;
+    return names[idx];
+  }
+
+  function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+  function spin() {
+    if (spinning) return;
+    spinning = true;
+    spinBtn.disabled = true;
+    resultEl.textContent = "";
+
+    const startAngle = currentAngle;
+    const extraTurns = 6 + Math.random() * 4; // 6–10 turns
+    const randomOffset = Math.random() * 2 * Math.PI;
+    const targetAngle = startAngle + extraTurns * 2 * Math.PI + randomOffset;
+
+    const duration = 3600; // ms
+    const start = performance.now();
+
+    function frame(now) {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = easeOutCubic(t);
+      currentAngle = startAngle + (targetAngle - startAngle) * eased;
+      drawWheel(currentAngle);
+
+      if (t < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        const winner = pickWinner(currentAngle);
+        resultEl.textContent = "🎉 Selected: " + winner;
+        spinning = false;
+        spinBtn.disabled = false;
+      }
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  spinBtn.addEventListener("click", spin);
+  drawWheel(currentAngle);
+</script>
+</body>
+</html>
