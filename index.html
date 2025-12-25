@@ -5,59 +5,182 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Name Wheel</title>
 <style>
-  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; text-align: center; padding: 24px; }
-  .wrap { max-width: 520px; margin: 0 auto; }
+  body {
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    text-align: center;
+    padding: 24px;
+    margin: 0;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; }
   h1 { margin: 0 0 12px; }
-  canvas { width: 100%; height: auto; max-width: 420px; border-radius: 16px; }
-  .pointer { width: 0; height: 0; border-left: 14px solid transparent; border-right: 14px solid transparent; border-bottom: 22px solid #111; margin: 14px auto 6px; }
-  button { font-size: 18px; padding: 12px 20px; border: 0; border-radius: 14px; cursor: pointer; }
-  button:disabled { opacity: .5; cursor: not-allowed; }
-  .result { margin-top: 12px; font-size: 18px; }
+
+  .pointer {
+    width: 0; height: 0;
+    border-left: 14px solid transparent;
+    border-right: 14px solid transparent;
+    border-bottom: 22px solid #111;
+    margin: 14px auto 6px;
+  }
+
+  canvas {
+    width: 100%;
+    height: auto;
+    max-width: 420px;
+    border-radius: 16px;
+  }
+
+  .btnRow {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+
+  button {
+    font-size: 18px;
+    padding: 12px 18px;
+    border: 0;
+    border-radius: 14px;
+    cursor: pointer;
+  }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+
+  .smallBtn { font-size: 14px; padding: 10px 14px; }
+
+  .result { margin-top: 12px; font-size: 18px; min-height: 1.4em; }
+
+  #editor {
+    display: none;
+    margin-top: 14px;
+    text-align: left;
+  }
+  #editorCard {
+    border: 1px solid #ddd;
+    border-radius: 14px;
+    padding: 14px;
+  }
+  textarea {
+    width: 100%;
+    font-size: 16px;
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+    resize: vertical;
+  }
+  .hint {
+    font-size: 13px;
+    opacity: 0.8;
+    margin-top: 8px;
+    line-height: 1.35;
+  }
 </style>
 </head>
+
 <body>
   <div class="wrap">
     <h1>🎡 Name Picker</h1>
+
     <div class="pointer"></div>
     <canvas id="wheel" width="420" height="420"></canvas>
-    <div style="margin-top:16px;">
+
+    <div class="btnRow">
       <button id="spinBtn">Spin</button>
+      <button class="smallBtn" id="editBtn">Edit names</button>
+      <button class="smallBtn" id="resetBtn">Reset</button>
     </div>
+
     <div class="result" id="result"></div>
+
+    <!-- Editor -->
+    <div id="editor">
+      <div id="editorCard">
+        <div style="font-weight: 600; margin-bottom: 8px;">Edit names (one per line)</div>
+        <textarea id="nameInput" rows="6" spellcheck="false"></textarea>
+
+        <div class="btnRow" style="justify-content:flex-start; margin-top:12px;">
+          <button class="smallBtn" id="saveBtn">Save</button>
+          <button class="smallBtn" id="cancelBtn">Cancel</button>
+        </div>
+
+        <div class="hint">
+          • Names are saved on this device automatically.<br/>
+          • Use “Reset” to restore the original list.<br/>
+          • You need at least 2 names.
+        </div>
+      </div>
+    </div>
   </div>
 
 <script>
-  // Locked list (no one needs to edit anything)
-  const names = ["Oliwia", "Wilmer", "Wenche", "Håkan", "Markus"];
+  // ====== DEFAULT (your original list) ======
+  const DEFAULT_NAMES = ["Oliwia", "Wilmer", "Wenche", "Håkan", "Markus"];
 
-  // Simple color palette (auto repeats if needed)
-  const colors = ["#ef4444","#3b82f6","#22c55e","#f59e0b","#a855f7"];
+  // Color palette (repeats automatically if you add more names)
+  const COLORS = ["#ef4444","#3b82f6","#22c55e","#f59e0b","#a855f7","#06b6d4","#f97316","#84cc16"];
 
+  // LocalStorage key (so edits persist on the device)
+  const STORAGE_KEY = "wheelNames_v1";
+
+  // Load names from device storage, or use default.
+  let names = loadNames();
+
+  // Canvas setup
   const canvas = document.getElementById("wheel");
   const ctx = canvas.getContext("2d");
   const spinBtn = document.getElementById("spinBtn");
+  const editBtn = document.getElementById("editBtn");
+  const resetBtn = document.getElementById("resetBtn");
   const resultEl = document.getElementById("result");
+
+  const editor = document.getElementById("editor");
+  const nameInput = document.getElementById("nameInput");
+  const saveBtn = document.getElementById("saveBtn");
+  const cancelBtn = document.getElementById("cancelBtn");
 
   const cx = canvas.width / 2;
   const cy = canvas.height / 2;
   const r = Math.min(cx, cy) - 10;
-  const slice = (2 * Math.PI) / names.length;
 
-  let currentAngle = 0;       // radians
+  let currentAngle = 0; // radians
   let spinning = false;
+
+  function loadNames() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return [...DEFAULT_NAMES];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed) || parsed.length < 2) return [...DEFAULT_NAMES];
+      return parsed.map(x => String(x)).filter(Boolean);
+    } catch {
+      return [...DEFAULT_NAMES];
+    }
+  }
+
+  function saveNamesToStorage(list) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  }
+
+  function sliceSize() {
+    return (2 * Math.PI) / names.length;
+  }
 
   function drawWheel(angle = 0) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const slice = sliceSize();
 
     for (let i = 0; i < names.length; i++) {
       const start = angle + i * slice;
       const end = start + slice;
 
+      // Wedge
       ctx.beginPath();
       ctx.moveTo(cx, cy);
       ctx.arc(cx, cy, r, start, end);
       ctx.closePath();
-      ctx.fillStyle = colors[i % colors.length];
+      ctx.fillStyle = COLORS[i % COLORS.length];
       ctx.fill();
 
       // Text
@@ -73,9 +196,10 @@
 
     // Center circle
     ctx.beginPath();
-    ctx.arc(cx, cy, 42, 0, 2 * Math.PI);
+    ctx.arc(cx, cy, 44, 0, 2 * Math.PI);
     ctx.fillStyle = "white";
     ctx.fill();
+
     ctx.font = "14px system-ui";
     ctx.fillStyle = "#111";
     ctx.textAlign = "center";
@@ -84,6 +208,7 @@
 
   function pickWinner(angle) {
     // Pointer is at top (12 o’clock). Convert angle to index.
+    const slice = sliceSize();
     const a = (2 * Math.PI - (angle % (2 * Math.PI)) + (slice / 2)) % (2 * Math.PI);
     const idx = Math.floor(a / slice) % names.length;
     return names[idx];
@@ -91,10 +216,17 @@
 
   function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
 
+  function setUIBusy(isBusy) {
+    spinBtn.disabled = isBusy;
+    editBtn.disabled = isBusy;
+    resetBtn.disabled = isBusy;
+  }
+
   function spin() {
-    if (spinning) return;
+    if (spinning || names.length < 2) return;
+
     spinning = true;
-    spinBtn.disabled = true;
+    setUIBusy(true);
     resultEl.textContent = "";
 
     const startAngle = currentAngle;
@@ -117,14 +249,68 @@
         const winner = pickWinner(currentAngle);
         resultEl.textContent = "🎉 Selected: " + winner;
         spinning = false;
-        spinBtn.disabled = false;
+        setUIBusy(false);
       }
     }
 
     requestAnimationFrame(frame);
   }
 
+  // ====== Editor logic ======
+  function openEditor() {
+    nameInput.value = names.join("\n");
+    editor.style.display = "block";
+    resultEl.textContent = "";
+    // scroll into view on mobile
+    editor.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function closeEditor() {
+    editor.style.display = "none";
+  }
+
+  function saveFromEditor() {
+    const newNames = nameInput.value
+      .split("\n")
+      .map(n => n.trim())
+      .filter(Boolean);
+
+    // Dedupe optional (prevents exact duplicates)
+    const unique = [];
+    for (const n of newNames) {
+      if (!unique.includes(n)) unique.push(n);
+    }
+
+    if (unique.length < 2) {
+      alert("Please enter at least two names.");
+      return;
+    }
+
+    names = unique;
+    saveNamesToStorage(names);
+    closeEditor();
+    drawWheel(currentAngle);
+  }
+
+  function resetNames() {
+    names = [...DEFAULT_NAMES];
+    saveNamesToStorage(names);
+    closeEditor();
+    resultEl.textContent = "";
+    drawWheel(currentAngle);
+  }
+
+  // Bind buttons
   spinBtn.addEventListener("click", spin);
+  editBtn.addEventListener("click", () => {
+    if (editor.style.display === "none") openEditor();
+    else closeEditor();
+  });
+  resetBtn.addEventListener("click", resetNames);
+  saveBtn.addEventListener("click", saveFromEditor);
+  cancelBtn.addEventListener("click", closeEditor);
+
+  // Initial draw
   drawWheel(currentAngle);
 </script>
 </body>
