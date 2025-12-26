@@ -1,13 +1,17 @@
+# Wheel - Spin 🎡
+
+![version](https://img.shields.io/badge/version-v1.3.0-blue)
+![live](https://img.shields.io/badge/live-GitHub%20Pages-brightgreen)
+
+<img src="Screenshot_20251226-121616.png" alt="Wheel - Spin preview" width="360">
+
 ## Live
 - Live site: [Wheel - Spin](https://mallowhaze.github.io/name-wheel/)
 
-# Wheel - Spin 🎡
-
+## Description
 A lightweight, mobile-first “spin the wheel” name picker built as a single-page web app and hosted on GitHub Pages.  
 Designed for non-technical users: open → tap the center → get a winner.
 > Note: if a device shows an older version after an update, open the site with a cache-buster like `?v=13` (or any higher number), then refresh.
-
----
 
 ## Features
 - **Max 8 names** (wheel automatically scales to the number of filled names)
@@ -100,7 +104,7 @@ They are related, but not the same thing.
 
 ---
 
-## Development notes
+## Notes & limitations
 ### Caching
 If you update the app and a device still shows an old version:
 1. Open the live site with a new cache-buster query, e.g. `?v=14`
@@ -109,3 +113,6 @@ If you update the app and a device still shows an old version:
 
 ### iOS install limitation
 iOS requires “Add to Home Screen” via Safari Share menu. This is expected behavior.
+
+---
+Built for simplicity and everyday use.
