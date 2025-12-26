@@ -5,12 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Wheel - Spin</title>
 
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Wheel - Spin">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
   <style>
     body {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       text-align: center;
       padding: 24px;
       margin: 0;
+      background: #fff;
     }
     .wrap { max-width: 560px; margin: 0 auto; }
     h1 { margin: 0 0 12px; }
@@ -23,12 +32,26 @@
       margin: 14px auto 6px;
     }
 
+    .wheelStack {
+      position: relative;
+      width: 100%;
+      max-width: 420px;
+      margin: 0 auto;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
     canvas {
       width: 100%;
       height: auto;
-      max-width: 420px;
-      border-radius: 16px;
+      display: block;
       touch-action: manipulation;
+    }
+
+    #confetti {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
     }
 
     .btnRow {
@@ -45,14 +68,80 @@
       border: 0;
       border-radius: 14px;
       cursor: pointer;
+      background: #f2f2f2;
     }
     button:disabled { opacity: .55; cursor: not-allowed; }
+
     .smallBtn { font-size: 14px; padding: 10px 14px; }
 
-    .result { margin-top: 12px; font-size: 18px; min-height: 1.4em; }
+    .result {
+      margin-top: 12px;
+      font-size: 18px;
+      min-height: 1.4em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
 
-    #editor { display: none; margin-top: 14px; text-align: left; }
-    #editorCard { border: 1px solid #ddd; border-radius: 14px; padding: 14px; }
+    .badge {
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #f2f2f2;
+    }
+
+    /* Settings panel */
+    #settings {
+      display: none;
+      margin-top: 14px;
+      text-align: left;
+    }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 14px;
+      padding: 14px;
+      background: #fff;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .row:last-child { border-bottom: 0; }
+    .row label { font-size: 14px; }
+    .row small { display:block; opacity:.75; margin-top:2px; }
+
+    /* Switch */
+    .switch {
+      position: relative;
+      width: 46px;
+      height: 28px;
+      background: #ddd;
+      border-radius: 999px;
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
+    .switch[data-on="true"] { background: #22c55e; }
+    .knob {
+      position: absolute;
+      top: 4px; left: 4px;
+      width: 20px; height: 20px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform .15s ease;
+    }
+    .switch[data-on="true"] .knob { transform: translateX(18px); }
+
+    /* Editor */
+    #editor {
+      display: none;
+      margin-top: 14px;
+      text-align: left;
+    }
     textarea {
       width: 100%;
       font-size: 16px;
@@ -63,6 +152,10 @@
       resize: vertical;
     }
     .hint { font-size: 13px; opacity: 0.8; margin-top: 8px; line-height: 1.35; }
+
+    /* History */
+    #historyBox { display: none; margin-top: 14px; text-align: left; }
+    ul { margin: 8px 0 0; padding-left: 18px; }
   </style>
 </head>
 
@@ -71,18 +164,66 @@
     <h1>🎡 Wheel - Spin</h1>
 
     <div class="pointer"></div>
-    <canvas id="wheel" width="420" height="420" aria-label="Wheel"></canvas>
+
+    <div class="wheelStack">
+      <canvas id="wheel" width="420" height="420" aria-label="Wheel"></canvas>
+      <canvas id="confetti" width="420" height="420" aria-hidden="true"></canvas>
+    </div>
 
     <div class="btnRow">
       <button id="spinBtn">Snurra</button>
       <button class="smallBtn" id="editBtn">Redigera namn</button>
       <button class="smallBtn" id="resetBtn">Återställ</button>
+      <button class="smallBtn" id="settingsBtn">Inställningar</button>
     </div>
 
     <div class="result" id="result"></div>
 
+    <!-- Settings -->
+    <div id="settings">
+      <div class="card">
+        <div style="font-weight: 600; margin-bottom: 8px;">Inställningar</div>
+
+        <div class="row">
+          <label>
+            Ljud
+            <small>Av som standard</small>
+          </label>
+          <div class="switch" id="soundSwitch" data-on="false" role="switch" aria-checked="false">
+            <div class="knob"></div>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>
+            Visa historik
+            <small>Visar senaste 5 vinnare</small>
+          </label>
+          <div class="switch" id="historySwitch" data-on="false" role="switch" aria-checked="false">
+            <div class="knob"></div>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>
+            Lås redigering
+            <small>Stänger av “Redigera namn”</small>
+          </label>
+          <div class="switch" id="lockSwitch" data-on="false" role="switch" aria-checked="false">
+            <div class="knob"></div>
+          </div>
+        </div>
+
+        <div class="hint">
+          • Du kan också trycka på mitten av hjulet för att snurra.<br/>
+          • Max 8 namn. Tomma rader ignoreras.
+        </div>
+      </div>
+    </div>
+
+    <!-- Editor -->
     <div id="editor">
-      <div id="editorCard">
+      <div class="card">
         <div style="font-weight: 600; margin-bottom: 8px;">Redigera namn (ett per rad)</div>
         <textarea id="nameInput" rows="8" spellcheck="false"></textarea>
 
@@ -93,237 +234,542 @@
 
         <div class="hint">
           • Max 8 namn.<br/>
-          • Tomma rader ignoreras.<br/>
           • Namnen sparas på den här enheten automatiskt.<br/>
-          • Minst 2 namn krävs.<br/>
-          • Du kan också trycka på mitten av hjulet för att snurra.
+          • Minst 2 namn krävs.
         </div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div id="historyBox">
+      <div class="card">
+        <div style="font-weight: 600;">Historik</div>
+        <ul id="historyList"></ul>
       </div>
     </div>
   </div>
 
-  <script>
-    const DEFAULT_NAMES = ["Oliwia", "Wilmer", "Wenche", "Håkan", "Markus"];
-    const MAX_NAMES = 8;
+<script>
+  // =============================
+  // CONFIG
+  // =============================
+  const DEFAULT_NAMES = ["Oliwia", "Wilmer", "Wenche", "Håkan", "Markus"];
+  const MAX_NAMES = 8;
+  const COLORS = ["#ef4444","#3b82f6","#22c55e","#f59e0b","#a855f7","#06b6d4","#f97316","#84cc16"];
 
-    const COLORS = ["#ef4444","#3b82f6","#22c55e","#f59e0b","#a855f7","#06b6d4","#f97316","#84cc16"];
-    const STORAGE_KEY = "wheelNames_clean_v1";
+  // Storage keys (per device)
+  const K_NAMES   = "wheel_names_v5";
+  const K_SOUND   = "wheel_sound_v1";
+  const K_HISTORY = "wheel_history_v1";
+  const K_SHOWH   = "wheel_showhistory_v1";
+  const K_LOCK    = "wheel_lockedit_v1";
 
-    const canvas = document.getElementById("wheel");
-    const ctx = canvas.getContext("2d");
+  // =============================
+  // DOM
+  // =============================
+  const wheel = document.getElementById("wheel");
+  const ctx = wheel.getContext("2d");
 
-    const spinBtn = document.getElementById("spinBtn");
-    const editBtn = document.getElementById("editBtn");
-    const resetBtn = document.getElementById("resetBtn");
-    const resultEl = document.getElementById("result");
+  const conf = document.getElementById("confetti");
+  const cctx = conf.getContext("2d");
 
-    const editor = document.getElementById("editor");
-    const nameInput = document.getElementById("nameInput");
-    const saveBtn = document.getElementById("saveBtn");
-    const cancelBtn = document.getElementById("cancelBtn");
+  const spinBtn = document.getElementById("spinBtn");
+  const editBtn = document.getElementById("editBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const settingsBtn = document.getElementById("settingsBtn");
 
-    const cx = canvas.width / 2;
-    const cy = canvas.height / 2;
-    const r  = Math.min(cx, cy) - 10;
+  const resultEl = document.getElementById("result");
 
-    const POINTER_ANGLE = -Math.PI / 2; // 12 o'clock
-    const CENTER_RADIUS = 44;
+  const settings = document.getElementById("settings");
+  const editor = document.getElementById("editor");
+  const nameInput = document.getElementById("nameInput");
+  const saveBtn = document.getElementById("saveBtn");
+  const cancelBtn = document.getElementById("cancelBtn");
 
-    let names = loadNames();
-    let currentAngle = initialAngle();
-    let spinning = false;
+  const historyBox = document.getElementById("historyBox");
+  const historyList = document.getElementById("historyList");
 
-    function loadNames() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        let list = raw ? JSON.parse(raw) : DEFAULT_NAMES;
-        if (!Array.isArray(list)) list = DEFAULT_NAMES;
+  const soundSwitch = document.getElementById("soundSwitch");
+  const historySwitch = document.getElementById("historySwitch");
+  const lockSwitch = document.getElementById("lockSwitch");
 
-        list = list.map(x => String(x).trim()).filter(Boolean);
+  // =============================
+  // Wheel geometry
+  // =============================
+  const cx = wheel.width / 2;
+  const cy = wheel.height / 2;
+  const r  = Math.min(cx, cy) - 10;
 
-        // de-dup
-        const unique = [];
-        for (const n of list) if (!unique.includes(n)) unique.push(n);
+  // angle 0 = 3 o'clock; pointer is 12 o'clock
+  const POINTER_ANGLE = -Math.PI / 2;
+  const CENTER_RADIUS = 44;
 
-        unique.splice(MAX_NAMES);
-        if (unique.length < 2) return [...DEFAULT_NAMES];
-        return unique;
-      } catch {
-        return [...DEFAULT_NAMES];
-      }
+  // State
+  let names = loadNames();
+  let currentAngle = initialAngle();
+  let spinning = false;
+
+  // Highlight
+  let highlightIndex = null;
+  let highlightUntil = 0;
+
+  // Settings
+  let soundOn = loadBool(K_SOUND, false);
+  let showHistory = loadBool(K_SHOWH, false);
+  let lockEdit = loadBool(K_LOCK, false);
+
+  // =============================
+  // Utilities
+  // =============================
+  function loadBool(key, fallback) {
+    const v = localStorage.getItem(key);
+    if (v === null) return fallback;
+    return v === "true";
+  }
+  function saveBool(key, val) {
+    localStorage.setItem(key, String(val));
+  }
+
+  function loadNames() {
+    try {
+      const raw = localStorage.getItem(K_NAMES);
+      let list = raw ? JSON.parse(raw) : DEFAULT_NAMES;
+      if (!Array.isArray(list)) list = DEFAULT_NAMES;
+
+      list = list.map(x => String(x).trim()).filter(Boolean);
+
+      // de-dupe
+      const unique = [];
+      for (const n of list) if (!unique.includes(n)) unique.push(n);
+
+      unique.splice(MAX_NAMES);
+      if (unique.length < 2) return [...DEFAULT_NAMES];
+      return unique;
+    } catch {
+      return [...DEFAULT_NAMES];
     }
+  }
+  function saveNames(list) {
+    localStorage.setItem(K_NAMES, JSON.stringify(list));
+  }
 
-    function saveNamesToStorage(list) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-    }
+  function count() { return names.length; }
+  function sliceSize() { return (2 * Math.PI) / count(); }
 
-    function count() { return names.length; }
-    function sliceSize() { return (2 * Math.PI) / count(); }
+  function initialAngle() {
+    const slice = sliceSize();
+    return POINTER_ANGLE - slice / 2; // center first slice under pointer
+  }
 
-    function initialAngle() {
-      const slice = sliceSize();
-      return POINTER_ANGLE - slice / 2;
-    }
+  function mod2pi(x) {
+    const two = 2 * Math.PI;
+    return ((x % two) + two) % two;
+  }
+  function indexAtPointer(angle) {
+    const slice = sliceSize();
+    const rel = mod2pi(POINTER_ANGLE - angle);
+    return Math.floor(rel / slice);
+  }
+  function pickWinner(angle) {
+    const idx = indexAtPointer(angle);
+    return { idx, name: names[idx] };
+  }
 
-    function drawWheel(angle = 0) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // =============================
+  // Draw wheel + highlight
+  // =============================
+  function drawWheel(angle = 0) {
+    ctx.clearRect(0, 0, wheel.width, wheel.height);
 
-      const n = count();
-      const slice = sliceSize();
+    const n = count();
+    const slice = sliceSize();
 
-      for (let i = 0; i < n; i++) {
-        const start = angle + i * slice;
-        const end   = start + slice;
+    for (let i = 0; i < n; i++) {
+      const start = angle + i * slice;
+      const end   = start + slice;
 
+      // Segment
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, start, end);
+      ctx.closePath();
+      ctx.fillStyle = COLORS[i % COLORS.length];
+      ctx.fill();
+
+      // Winner highlight pulse
+      const now = performance.now();
+      if (highlightIndex === i && now < highlightUntil) {
+        const t = 1 - (highlightUntil - now) / 900; // 0..1
+        const pulse = 6 + Math.sin(t * Math.PI * 4) * 2; // pulse thickness
+        ctx.save();
+        ctx.lineWidth = pulse;
+        ctx.strokeStyle = "rgba(255,255,255,0.9)";
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.arc(cx, cy, r, start, end);
         ctx.closePath();
-        ctx.fillStyle = COLORS[i % COLORS.length];
-        ctx.fill();
-
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(start + slice / 2);
-        ctx.textAlign = "right";
-        ctx.fillStyle = "white";
-        ctx.font = "16px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-        ctx.fillText(names[i], r - 18, 6);
+        ctx.stroke();
         ctx.restore();
       }
 
-      ctx.beginPath();
-      ctx.arc(cx, cy, CENTER_RADIUS, 0, 2 * Math.PI);
+      // Text
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(start + slice / 2);
+      ctx.textAlign = "right";
       ctx.fillStyle = "white";
-      ctx.fill();
-
-      ctx.font = "14px system-ui";
-      ctx.fillStyle = "#111";
-      ctx.textAlign = "center";
-      ctx.fillText("SNURRA", cx, cy + 5);
+      ctx.font = "16px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+      ctx.fillText(names[i], r - 18, 6);
+      ctx.restore();
     }
 
-    function mod2pi(x) {
-      const two = 2 * Math.PI;
-      return ((x % two) + two) % two;
+    // Center circle
+    ctx.beginPath();
+    ctx.arc(cx, cy, CENTER_RADIUS, 0, 2 * Math.PI);
+    ctx.fillStyle = "white";
+    ctx.fill();
+
+    ctx.font = "14px system-ui";
+    ctx.fillStyle = "#111";
+    ctx.textAlign = "center";
+    ctx.fillText("SNURRA", cx, cy + 5);
+  }
+
+  // =============================
+  // Confetti (subtle)
+  // =============================
+  let confettiParticles = [];
+  function startConfetti() {
+    confettiParticles = [];
+    const N = 70;
+    for (let i = 0; i < N; i++) {
+      confettiParticles.push({
+        x: Math.random() * conf.width,
+        y: -10 - Math.random() * 80,
+        vx: (Math.random() - 0.5) * 2.0,
+        vy: 2.5 + Math.random() * 3.5,
+        rot: Math.random() * Math.PI,
+        vr: (Math.random() - 0.5) * 0.2,
+        size: 4 + Math.random() * 5,
+        life: 900 + Math.random() * 600,
+        born: performance.now(),
+        color: COLORS[Math.floor(Math.random() * COLORS.length)]
+      });
+    }
+    requestAnimationFrame(tickConfetti);
+  }
+
+  function tickConfetti(now) {
+    cctx.clearRect(0, 0, conf.width, conf.height);
+
+    let alive = 0;
+    for (const p of confettiParticles) {
+      const age = now - p.born;
+      if (age > p.life) continue;
+      alive++;
+
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rot += p.vr;
+
+      const alpha = Math.max(0, 1 - age / p.life);
+
+      cctx.save();
+      cctx.translate(p.x, p.y);
+      cctx.rotate(p.rot);
+      cctx.globalAlpha = alpha * 0.9;
+      cctx.fillStyle = p.color;
+      cctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.7);
+      cctx.restore();
     }
 
-    function indexAtPointer(angle) {
-      const slice = sliceSize();
-      const rel = mod2pi(POINTER_ANGLE - angle);
-      return Math.floor(rel / slice);
-    }
+    if (alive > 0) requestAnimationFrame(tickConfetti);
+    else cctx.clearRect(0, 0, conf.width, conf.height);
+  }
 
-    function pickWinner(angle) {
-      return names[indexAtPointer(angle)];
-    }
+  // =============================
+  // Sound (winner ding)
+  // =============================
+  let audioCtx = null;
+  function ding() {
+    if (!soundOn) return;
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const t0 = audioCtx.currentTime;
 
-    function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = "sine";
+      o.frequency.setValueAtTime(880, t0);
+      o.frequency.exponentialRampToValueAtTime(660, t0 + 0.12);
 
-    function setUIBusy(isBusy) {
-      spinBtn.disabled = isBusy;
-      editBtn.disabled = isBusy;
-      resetBtn.disabled = isBusy;
-    }
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.18, t0 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18);
 
-    function spin() {
-      if (spinning) return;
-      if (names.length < 2) { alert("Lägg till minst två namn."); return; }
+      o.connect(g);
+      g.connect(audioCtx.destination);
 
-      spinning = true;
-      setUIBusy(true);
-      resultEl.textContent = "";
+      o.start(t0);
+      o.stop(t0 + 0.2);
+    } catch {}
+  }
 
-      const startAngle = currentAngle;
-      const extraTurns = 6 + Math.random() * 4;
-      const randomOffset = Math.random() * 2 * Math.PI;
-      const targetAngle = startAngle + extraTurns * 2 * Math.PI + randomOffset;
+  // =============================
+  // Spin logic
+  // =============================
+  function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
 
-      const duration = 3600;
-      const start = performance.now();
+  function setUIBusy(isBusy) {
+    spinBtn.disabled = isBusy;
+    resetBtn.disabled = isBusy;
+    settingsBtn.disabled = isBusy;
 
-      function frame(now) {
-        const t = Math.min(1, (now - start) / duration);
-        const eased = easeOutCubic(t);
-        currentAngle = startAngle + (targetAngle - startAngle) * eased;
-        drawWheel(currentAngle);
+    // edit button also depends on lock
+    editBtn.disabled = isBusy || lockEdit;
+  }
 
-        if (t < 1) requestAnimationFrame(frame);
-        else {
-          resultEl.textContent = "🎉 Vinnare: " + pickWinner(currentAngle);
-          spinning = false;
-          setUIBusy(false);
-        }
-      }
-      requestAnimationFrame(frame);
-    }
+  function spin() {
+    if (spinning) return;
+    if (names.length < 2) { alert("Lägg till minst två namn."); return; }
 
-    function openEditor() {
-      nameInput.value = names.join("\n");
-      editor.style.display = "block";
-      resultEl.textContent = "";
-      editor.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+    spinning = true;
+    setUIBusy(true);
+    resultEl.textContent = "";
+    highlightIndex = null;
 
-    function closeEditor() { editor.style.display = "none"; }
+    const startAngle = currentAngle;
+    const extraTurns = 6 + Math.random() * 4;
+    const randomOffset = Math.random() * 2 * Math.PI;
+    const targetAngle = startAngle + extraTurns * 2 * Math.PI + randomOffset;
 
-    function saveFromEditor() {
-      let newNames = nameInput.value.split("\n").map(n => n.trim()).filter(Boolean);
+    const duration = 3600;
+    const start = performance.now();
 
-      const unique = [];
-      for (const n of newNames) if (!unique.includes(n)) unique.push(n);
-      unique.splice(MAX_NAMES);
+    function frame(now) {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = easeOutCubic(t);
+      currentAngle = startAngle + (targetAngle - startAngle) * eased;
 
-      if (unique.length < 2) { alert("Skriv minst två namn."); return; }
-
-      names = unique;
-      saveNamesToStorage(names);
-      currentAngle = initialAngle();
-      closeEditor();
       drawWheel(currentAngle);
-    }
 
-    function resetNames() {
-      names = [...DEFAULT_NAMES].slice(0, MAX_NAMES);
-      saveNamesToStorage(names);
-      currentAngle = initialAngle();
-      closeEditor();
-      resultEl.textContent = "";
-      drawWheel(currentAngle);
-    }
+      if (t < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        const winner = pickWinner(currentAngle);
+        highlightIndex = winner.idx;
+        highlightUntil = performance.now() + 900;
 
-    function canvasPointerPosition(evt) {
-      const rect = canvas.getBoundingClientRect();
-      const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
-      const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
-      const x = (clientX - rect.left) * (canvas.width / rect.width);
-      const y = (clientY - rect.top)  * (canvas.height / rect.height);
-      return { x, y };
-    }
+        resultEl.innerHTML = `🎉 <span class="badge">Vinnare:</span> <strong>${escapeHtml(winner.name)}</strong>`;
+        addToHistory(winner.name);
 
-    function isInCenter(x, y) {
-      const dx = x - cx, dy = y - cy;
-      return Math.sqrt(dx*dx + dy*dy) <= CENTER_RADIUS;
-    }
+        // celebratory effects
+        startConfetti();
+        ding();
 
-    function handleCanvasTap(evt) {
-      const { x, y } = canvasPointerPosition(evt);
-      if (isInCenter(x, y)) {
-        evt.preventDefault();
-        spin();
+        // keep drawing briefly for highlight pulse
+        requestAnimationFrame(function pulseLoop(now2) {
+          if (performance.now() < highlightUntil) {
+            drawWheel(currentAngle);
+            requestAnimationFrame(pulseLoop);
+          } else {
+            drawWheel(currentAngle);
+          }
+        });
+
+        spinning = false;
+        setUIBusy(false);
       }
     }
 
-    spinBtn.addEventListener("click", spin);
-    editBtn.addEventListener("click", () => editor.style.display === "none" ? openEditor() : closeEditor());
-    resetBtn.addEventListener("click", resetNames);
-    saveBtn.addEventListener("click", saveFromEditor);
-    cancelBtn.addEventListener("click", closeEditor);
+    requestAnimationFrame(frame);
+  }
 
-    canvas.addEventListener("click", handleCanvasTap);
-    canvas.addEventListener("touchstart", handleCanvasTap, { passive: false });
+  // =============================
+  // Tap center to spin
+  // =============================
+  function canvasPointerPosition(evt) {
+    const rect = wheel.getBoundingClientRect();
+    const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+    const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
 
+    const x = (clientX - rect.left) * (wheel.width / rect.width);
+    const y = (clientY - rect.top)  * (wheel.height / rect.height);
+    return { x, y };
+  }
+  function isInCenter(x, y) {
+    const dx = x - cx, dy = y - cy;
+    return Math.sqrt(dx*dx + dy*dy) <= CENTER_RADIUS;
+  }
+  function handleWheelTap(evt) {
+    const { x, y } = canvasPointerPosition(evt);
+    if (isInCenter(x, y)) {
+      evt.preventDefault();
+      spin();
+    }
+  }
+
+  // =============================
+  // Editor
+  // =============================
+  function openEditor() {
+    if (lockEdit) return;
+    nameInput.value = names.join("\n");
+    editor.style.display = "block";
+    settings.style.display = "none";
+    resultEl.textContent = "";
+    editor.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  function closeEditor() { editor.style.display = "none"; }
+
+  function saveFromEditor() {
+    let newNames = nameInput.value.split("\n").map(n => n.trim()).filter(Boolean);
+
+    const unique = [];
+    for (const n of newNames) if (!unique.includes(n)) unique.push(n);
+    unique.splice(MAX_NAMES);
+
+    if (unique.length < 2) { alert("Skriv minst två namn."); return; }
+
+    names = unique;
+    saveNames(names);
+    currentAngle = initialAngle();
+    closeEditor();
     drawWheel(currentAngle);
-  </script>
+  }
+
+  function resetNames() {
+    names = [...DEFAULT_NAMES].slice(0, MAX_NAMES);
+    saveNames(names);
+    currentAngle = initialAngle();
+    closeEditor();
+    resultEl.textContent = "";
+    drawWheel(currentAngle);
+  }
+
+  // =============================
+  // Settings + toggles
+  // =============================
+  function togglePanel(panelEl) {
+    const isOpen = panelEl.style.display === "block";
+    panelEl.style.display = isOpen ? "none" : "block";
+    if (!isOpen) panelEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function setSwitch(sw, on) {
+    sw.dataset.on = on ? "true" : "false";
+    sw.setAttribute("aria-checked", on ? "true" : "false");
+  }
+
+  function toggleSwitch(sw, getterSetter) {
+    const current = sw.dataset.on === "true";
+    const next = !current;
+    setSwitch(sw, next);
+    getterSetter(next);
+  }
+
+  // =============================
+  // History
+  // =============================
+  function loadHistory() {
+    try {
+      const raw = localStorage.getItem(K_HISTORY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr.map(String) : [];
+    } catch { return []; }
+  }
+  function saveHistory(arr) {
+    localStorage.setItem(K_HISTORY, JSON.stringify(arr));
+  }
+
+  function addToHistory(name) {
+    const h = loadHistory();
+    h.unshift(name);
+    const trimmed = h.slice(0, 5);
+    saveHistory(trimmed);
+    renderHistory();
+  }
+
+  function renderHistory() {
+    if (!showHistory) {
+      historyBox.style.display = "none";
+      return;
+    }
+    const h = loadHistory();
+    historyList.innerHTML = "";
+    for (const item of h) {
+      const li = document.createElement("li");
+      li.textContent = item;
+      historyList.appendChild(li);
+    }
+    historyBox.style.display = "block";
+  }
+
+  // =============================
+  // Safety
+  // =============================
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+    }[c]));
+  }
+
+  // =============================
+  // Service worker (PWA-ish)
+  // =============================
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    });
+  }
+
+  // =============================
+  // Bind events
+  // =============================
+  spinBtn.addEventListener("click", spin);
+  resetBtn.addEventListener("click", resetNames);
+  editBtn.addEventListener("click", openEditor);
+
+  settingsBtn.addEventListener("click", () => {
+    closeEditor();
+    togglePanel(settings);
+  });
+
+  saveBtn.addEventListener("click", saveFromEditor);
+  cancelBtn.addEventListener("click", closeEditor);
+
+  wheel.addEventListener("click", handleWheelTap);
+  wheel.addEventListener("touchstart", handleWheelTap, { passive: false });
+
+  // Switch toggles
+  soundSwitch.addEventListener("click", () => {
+    toggleSwitch(soundSwitch, (v) => { soundOn = v; saveBool(K_SOUND, v); });
+  });
+
+  historySwitch.addEventListener("click", () => {
+    toggleSwitch(historySwitch, (v) => { showHistory = v; saveBool(K_SHOWH, v); renderHistory(); });
+  });
+
+  lockSwitch.addEventListener("click", () => {
+    toggleSwitch(lockSwitch, (v) => {
+      lockEdit = v;
+      saveBool(K_LOCK, v);
+      editBtn.disabled = lockEdit || spinning;
+    });
+  });
+
+  // =============================
+  // Init UI state
+  // =============================
+  setSwitch(soundSwitch, soundOn);
+  setSwitch(historySwitch, showHistory);
+  setSwitch(lockSwitch, lockEdit);
+
+  editBtn.disabled = lockEdit;
+  renderHistory();
+
+  // First render
+  drawWheel(currentAngle);
+</script>
 </body>
 </html>
