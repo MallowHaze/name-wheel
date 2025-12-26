@@ -7,155 +7,189 @@
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#ffffff" id="themeColorMeta">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Wheel - Spin">
   <link rel="apple-touch-icon" href="icon-192.png">
 
   <style>
-    body {
+    :root{
+      --bg:#ffffff;
+      --card:#ffffff;
+      --text:#111111;
+      --muted: rgba(0,0,0,0.7);
+      --border:#dddddd;
+      --border2:#eeeeee;
+      --btn:#f2f2f2;
+      --btnText:#111;
+      --badge:#f2f2f2;
+      --pointer:#111;
+    }
+    [data-theme="dark"]{
+      --bg:#0b0f19;
+      --card:#111827;
+      --text:#f3f4f6;
+      --muted: rgba(243,244,246,0.75);
+      --border:#273244;
+      --border2:#1f2937;
+      --btn:#1f2937;
+      --btnText:#f3f4f6;
+      --badge:#1f2937;
+      --pointer:#f3f4f6;
+    }
+
+    body{
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      text-align: center;
-      padding: 24px;
-      margin: 0;
-      background: #fff;
+      text-align:center;
+      padding:24px;
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
     }
-    .wrap { max-width: 560px; margin: 0 auto; }
-    h1 { margin: 0 0 12px; }
+    .wrap{ max-width:560px; margin:0 auto; }
+    h1{ margin:0 0 12px; }
 
-    .pointer {
-      width: 0; height: 0;
-      border-left: 14px solid transparent;
-      border-right: 14px solid transparent;
-      border-bottom: 22px solid #111;
-      margin: 14px auto 6px;
-    }
-
-    .wheelStack {
-      position: relative;
-      width: 100%;
-      max-width: 420px;
-      margin: 0 auto;
-      border-radius: 16px;
-      overflow: hidden;
+    .pointer{
+      width:0;height:0;
+      border-left:14px solid transparent;
+      border-right:14px solid transparent;
+      border-bottom:22px solid var(--pointer);
+      margin:14px auto 6px;
     }
 
-    canvas {
-      width: 100%;
-      height: auto;
-      display: block;
-      touch-action: manipulation;
+    .wheelStack{
+      position:relative;
+      width:100%;
+      max-width:420px;
+      margin:0 auto;
+      border-radius:16px;
+      overflow:hidden;
+    }
+    canvas{
+      width:100%;
+      height:auto;
+      display:block;
+      touch-action:manipulation;
+    }
+    #confetti{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
     }
 
-    #confetti {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
+    .btnRow{
+      display:flex;
+      gap:10px;
+      justify-content:center;
+      margin-top:16px;
+      flex-wrap:wrap;
+    }
+    button{
+      font-size:16px;
+      padding:12px 16px;
+      border:0;
+      border-radius:14px;
+      cursor:pointer;
+      background:var(--btn);
+      color:var(--btnText);
+    }
+    button:disabled{ opacity:.55; cursor:not-allowed; }
+
+    .smallBtn{ font-size:14px; padding:10px 14px; }
+
+    .result{
+      margin-top:12px;
+      font-size:18px;
+      min-height:1.4em;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+    }
+    .badge{
+      font-size:12px;
+      padding:6px 10px;
+      border-radius:999px;
+      background:var(--badge);
+      color:var(--text);
     }
 
-    .btnRow {
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-      margin-top: 16px;
-      flex-wrap: wrap;
+    /* Panels */
+    #settings, #editor, #historyBox, #installHelp { display:none; margin-top:14px; text-align:left; }
+    .card{
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:14px;
+      background:var(--card);
     }
+    .row{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      padding:10px 0;
+      border-bottom:1px solid var(--border2);
+    }
+    .row:last-child{ border-bottom:0; }
+    .row label{ font-size:14px; color:var(--text); }
+    .row small{ display:block; color:var(--muted); margin-top:2px; }
 
-    button {
-      font-size: 18px;
-      padding: 12px 18px;
-      border: 0;
-      border-radius: 14px;
-      cursor: pointer;
-      background: #f2f2f2;
+    textarea{
+      width:100%;
+      font-size:16px;
+      padding:10px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:transparent;
+      color:var(--text);
+      box-sizing:border-box;
+      resize:vertical;
     }
-    button:disabled { opacity: .55; cursor: not-allowed; }
+    .hint{ font-size:13px; color:var(--muted); margin-top:8px; line-height:1.35; }
+    ul{ margin:8px 0 0; padding-left:18px; }
 
-    .smallBtn { font-size: 14px; padding: 10px 14px; }
-
-    .result {
-      margin-top: 12px;
-      font-size: 18px;
-      min-height: 1.4em;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
+    select{
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:transparent;
+      color:var(--text);
+      font-size:14px;
     }
-
-    .badge {
-      font-size: 12px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: #f2f2f2;
-    }
-
-    /* Settings panel */
-    #settings {
-      display: none;
-      margin-top: 14px;
-      text-align: left;
-    }
-    .card {
-      border: 1px solid #ddd;
-      border-radius: 14px;
-      padding: 14px;
-      background: #fff;
-    }
-    .row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 0;
-      border-bottom: 1px solid #eee;
-    }
-    .row:last-child { border-bottom: 0; }
-    .row label { font-size: 14px; }
-    .row small { display:block; opacity:.75; margin-top:2px; }
 
     /* Switch */
-    .switch {
-      position: relative;
-      width: 46px;
-      height: 28px;
-      background: #ddd;
-      border-radius: 999px;
-      cursor: pointer;
-      flex: 0 0 auto;
+    .switch{
+      position:relative;
+      width:46px; height:28px;
+      background:#ddd;
+      border-radius:999px;
+      cursor:pointer;
+      flex:0 0 auto;
     }
-    .switch[data-on="true"] { background: #22c55e; }
-    .knob {
-      position: absolute;
-      top: 4px; left: 4px;
-      width: 20px; height: 20px;
-      background: #fff;
-      border-radius: 50%;
-      transition: transform .15s ease;
+    [data-theme="dark"] .switch{ background:#374151; }
+    .switch[data-on="true"]{ background:#22c55e; }
+    .knob{
+      position:absolute;
+      top:4px; left:4px;
+      width:20px; height:20px;
+      background:#fff;
+      border-radius:50%;
+      transition:transform .15s ease;
     }
-    .switch[data-on="true"] .knob { transform: translateX(18px); }
+    .switch[data-on="true"] .knob{ transform:translateX(18px); }
 
-    /* Editor */
-    #editor {
-      display: none;
-      margin-top: 14px;
-      text-align: left;
+    /* Advanced section */
+    #advanced { display:none; margin-top:12px; }
+    .advHeader{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-top:6px;
+      cursor:pointer;
+      user-select:none;
     }
-    textarea {
-      width: 100%;
-      font-size: 16px;
-      padding: 10px;
-      border-radius: 12px;
-      border: 1px solid #ccc;
-      box-sizing: border-box;
-      resize: vertical;
-    }
-    .hint { font-size: 13px; opacity: 0.8; margin-top: 8px; line-height: 1.35; }
-
-    /* History */
-    #historyBox { display: none; margin-top: 14px; text-align: left; }
-    ul { margin: 8px 0 0; padding-left: 18px; }
+    .advHeader span{ color:var(--muted); font-size:13px; }
   </style>
 </head>
 
@@ -171,10 +205,10 @@
     </div>
 
     <div class="btnRow">
-      <button id="spinBtn">Snurra</button>
       <button class="smallBtn" id="editBtn">Redigera namn</button>
       <button class="smallBtn" id="resetBtn">Återställ</button>
       <button class="smallBtn" id="settingsBtn">Inställningar</button>
+      <button class="smallBtn" id="installBtn">Installera</button>
     </div>
 
     <div class="result" id="result"></div>
@@ -182,7 +216,20 @@
     <!-- Settings -->
     <div id="settings">
       <div class="card">
-        <div style="font-weight: 600; margin-bottom: 8px;">Inställningar</div>
+        <div style="font-weight:600; margin-bottom:8px;">Inställningar</div>
+
+        <div class="row" style="align-items:flex-start;">
+          <label>
+            Tema
+            <small>System (auto) / Ljust / Mörkt</small>
+          </label>
+
+          <select id="themeSelect">
+            <option value="system">System</option>
+            <option value="light">Ljust</option>
+            <option value="dark">Mörkt</option>
+          </select>
+        </div>
 
         <div class="row">
           <label>
@@ -214,8 +261,35 @@
           </div>
         </div>
 
+        <div class="advHeader" id="advToggle">
+          <div style="font-weight:600;">Avancerat</div>
+          <span id="advHint">Visa</span>
+        </div>
+
+        <div id="advanced">
+          <div class="row">
+            <label>
+              Klickljud under snurr
+              <small>Click-click-click</small>
+            </label>
+            <div class="switch" id="clickSwitch" data-on="true" role="switch" aria-checked="true">
+              <div class="knob"></div>
+            </div>
+          </div>
+
+          <div class="row">
+            <label>
+              Vinnarpling
+              <small>Litet “ding” när vinnaren visas</small>
+            </label>
+            <div class="switch" id="dingSwitch" data-on="true" role="switch" aria-checked="true">
+              <div class="knob"></div>
+            </div>
+          </div>
+        </div>
+
         <div class="hint">
-          • Du kan också trycka på mitten av hjulet för att snurra.<br/>
+          • Tryck på mitten av hjulet för att snurra.<br/>
           • Max 8 namn. Tomma rader ignoreras.
         </div>
       </div>
@@ -224,7 +298,7 @@
     <!-- Editor -->
     <div id="editor">
       <div class="card">
-        <div style="font-weight: 600; margin-bottom: 8px;">Redigera namn (ett per rad)</div>
+        <div style="font-weight:600; margin-bottom:8px;">Redigera namn (ett per rad)</div>
         <textarea id="nameInput" rows="8" spellcheck="false"></textarea>
 
         <div class="btnRow" style="justify-content:flex-start; margin-top:12px;">
@@ -243,8 +317,24 @@
     <!-- History -->
     <div id="historyBox">
       <div class="card">
-        <div style="font-weight: 600;">Historik</div>
+        <div style="font-weight:600;">Historik</div>
         <ul id="historyList"></ul>
+      </div>
+    </div>
+
+    <!-- Install help -->
+    <div id="installHelp">
+      <div class="card">
+        <div style="font-weight:600; margin-bottom:6px;">Installera</div>
+        <div class="hint" style="margin-top:0;">
+          På iPhone/iPad:
+          <ol style="margin:8px 0 0; padding-left:18px;">
+            <li>Tryck på <strong>Dela</strong>-knappen i Safari</li>
+            <li>Välj <strong>Lägg till på hemskärmen</strong></li>
+            <li>Öppna sedan appen från hemskärmen</li>
+          </ol>
+          På Android (Chrome): Om en install-ruta inte dyker upp, öppna menyn och välj <strong>Installera app</strong>.
+        </div>
       </div>
     </div>
   </div>
@@ -258,11 +348,14 @@
   const COLORS = ["#ef4444","#3b82f6","#22c55e","#f59e0b","#a855f7","#06b6d4","#f97316","#84cc16"];
 
   // Storage keys (per device)
-  const K_NAMES   = "wheel_names_v5";
-  const K_SOUND   = "wheel_sound_v1";
-  const K_HISTORY = "wheel_history_v1";
-  const K_SHOWH   = "wheel_showhistory_v1";
-  const K_LOCK    = "wheel_lockedit_v1";
+  const K_NAMES   = "wheel_names_v7";
+  const K_SOUND   = "wheel_sound_v3";
+  const K_SHOWH   = "wheel_showhistory_v3";
+  const K_LOCK    = "wheel_lockedit_v3";
+  const K_THEME   = "wheel_theme_v1";          // system | light | dark
+  const K_CLICK   = "wheel_clicksound_v2";
+  const K_DING    = "wheel_dingsound_v2";
+  const K_HISTORY = "wheel_history_v3";
 
   // =============================
   // DOM
@@ -273,10 +366,10 @@
   const conf = document.getElementById("confetti");
   const cctx = conf.getContext("2d");
 
-  const spinBtn = document.getElementById("spinBtn");
   const editBtn = document.getElementById("editBtn");
   const resetBtn = document.getElementById("resetBtn");
   const settingsBtn = document.getElementById("settingsBtn");
+  const installBtn = document.getElementById("installBtn");
 
   const resultEl = document.getElementById("result");
 
@@ -289,9 +382,20 @@
   const historyBox = document.getElementById("historyBox");
   const historyList = document.getElementById("historyList");
 
+  const installHelp = document.getElementById("installHelp");
+
   const soundSwitch = document.getElementById("soundSwitch");
   const historySwitch = document.getElementById("historySwitch");
   const lockSwitch = document.getElementById("lockSwitch");
+
+  const themeSelect = document.getElementById("themeSelect");
+
+  const clickSwitch = document.getElementById("clickSwitch");
+  const dingSwitch  = document.getElementById("dingSwitch");
+
+  const advToggle = document.getElementById("advToggle");
+  const advHint = document.getElementById("advHint");
+  const advanced = document.getElementById("advanced");
 
   // =============================
   // Wheel geometry
@@ -300,8 +404,7 @@
   const cy = wheel.height / 2;
   const r  = Math.min(cx, cy) - 10;
 
-  // angle 0 = 3 o'clock; pointer is 12 o'clock
-  const POINTER_ANGLE = -Math.PI / 2;
+  const POINTER_ANGLE = -Math.PI / 2; // 12 o'clock
   const CENTER_RADIUS = 44;
 
   // State
@@ -313,29 +416,54 @@
   let highlightIndex = null;
   let highlightUntil = 0;
 
-  // Settings
+  // Settings state
   let soundOn = loadBool(K_SOUND, false);
   let showHistory = loadBool(K_SHOWH, false);
   let lockEdit = loadBool(K_LOCK, false);
+  let themeMode = localStorage.getItem(K_THEME) || "system"; // system|light|dark
+  let clickOn = loadBool(K_CLICK, true);
+  let dingOn  = loadBool(K_DING, true);
 
   // =============================
-  // Utilities
+  // Helpers
   // =============================
-  function loadBool(key, fallback) {
+  function loadBool(key, fallback){
     const v = localStorage.getItem(key);
     if (v === null) return fallback;
     return v === "true";
   }
-  function saveBool(key, val) {
-    localStorage.setItem(key, String(val));
+  function saveBool(key, val){ localStorage.setItem(key, String(val)); }
+
+  function applyTheme(mode){
+    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const useDark = (mode === "dark") || (mode === "system" && prefersDark);
+
+    document.documentElement.setAttribute("data-theme", useDark ? "dark" : "light");
+
+    const meta = document.getElementById("themeColorMeta");
+    meta.setAttribute("content", useDark ? "#0b0f19" : "#ffffff");
   }
 
-  function loadNames() {
-    try {
+  // listen for system changes (only when mode is "system")
+  const mql = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  if (mql) {
+    if (mql.addEventListener) {
+      mql.addEventListener("change", () => {
+        if ((localStorage.getItem(K_THEME) || "system") === "system") applyTheme("system");
+      });
+    } else if (mql.addListener) {
+      // older Safari
+      mql.addListener(() => {
+        if ((localStorage.getItem(K_THEME) || "system") === "system") applyTheme("system");
+      });
+    }
+  }
+
+  function loadNames(){
+    try{
       const raw = localStorage.getItem(K_NAMES);
       let list = raw ? JSON.parse(raw) : DEFAULT_NAMES;
       if (!Array.isArray(list)) list = DEFAULT_NAMES;
-
       list = list.map(x => String(x).trim()).filter(Boolean);
 
       // de-dupe
@@ -345,50 +473,67 @@
       unique.splice(MAX_NAMES);
       if (unique.length < 2) return [...DEFAULT_NAMES];
       return unique;
-    } catch {
+    }catch{
       return [...DEFAULT_NAMES];
     }
   }
-  function saveNames(list) {
-    localStorage.setItem(K_NAMES, JSON.stringify(list));
-  }
+  function saveNames(list){ localStorage.setItem(K_NAMES, JSON.stringify(list)); }
 
-  function count() { return names.length; }
-  function sliceSize() { return (2 * Math.PI) / count(); }
+  function count(){ return names.length; }
+  function sliceSize(){ return (2 * Math.PI) / count(); }
 
-  function initialAngle() {
+  function initialAngle(){
     const slice = sliceSize();
-    return POINTER_ANGLE - slice / 2; // center first slice under pointer
+    return POINTER_ANGLE - slice / 2;
   }
 
-  function mod2pi(x) {
+  function mod2pi(x){
     const two = 2 * Math.PI;
     return ((x % two) + two) % two;
   }
-  function indexAtPointer(angle) {
+  function indexAtPointer(angle){
     const slice = sliceSize();
     const rel = mod2pi(POINTER_ANGLE - angle);
     return Math.floor(rel / slice);
   }
-  function pickWinner(angle) {
+  function pickWinner(angle){
     const idx = indexAtPointer(angle);
     return { idx, name: names[idx] };
   }
 
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, c => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+    }[c]));
+  }
+
   // =============================
-  // Draw wheel + highlight
+  // Switch UI
   // =============================
-  function drawWheel(angle = 0) {
+  function setSwitch(sw, on){
+    sw.dataset.on = on ? "true" : "false";
+    sw.setAttribute("aria-checked", on ? "true" : "false");
+  }
+  function toggleSwitch(sw, setter){
+    const current = sw.dataset.on === "true";
+    const next = !current;
+    setSwitch(sw, next);
+    setter(next);
+  }
+
+  // =============================
+  // Draw wheel
+  // =============================
+  function drawWheel(angle = 0){
     ctx.clearRect(0, 0, wheel.width, wheel.height);
 
     const n = count();
     const slice = sliceSize();
 
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < n; i++){
       const start = angle + i * slice;
       const end   = start + slice;
 
-      // Segment
       ctx.beginPath();
       ctx.moveTo(cx, cy);
       ctx.arc(cx, cy, r, start, end);
@@ -398,9 +543,9 @@
 
       // Winner highlight pulse
       const now = performance.now();
-      if (highlightIndex === i && now < highlightUntil) {
-        const t = 1 - (highlightUntil - now) / 900; // 0..1
-        const pulse = 6 + Math.sin(t * Math.PI * 4) * 2; // pulse thickness
+      if (highlightIndex === i && now < highlightUntil){
+        const t = 1 - (highlightUntil - now) / 900;
+        const pulse = 6 + Math.sin(t * Math.PI * 4) * 2;
         ctx.save();
         ctx.lineWidth = pulse;
         ctx.strokeStyle = "rgba(255,255,255,0.9)";
@@ -412,7 +557,6 @@
         ctx.restore();
       }
 
-      // Text
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(start + slice / 2);
@@ -436,13 +580,13 @@
   }
 
   // =============================
-  // Confetti (subtle)
+  // Confetti
   // =============================
   let confettiParticles = [];
-  function startConfetti() {
+  function startConfetti(){
     confettiParticles = [];
     const N = 70;
-    for (let i = 0; i < N; i++) {
+    for (let i = 0; i < N; i++){
       confettiParticles.push({
         x: Math.random() * conf.width,
         y: -10 - Math.random() * 80,
@@ -458,12 +602,10 @@
     }
     requestAnimationFrame(tickConfetti);
   }
-
-  function tickConfetti(now) {
+  function tickConfetti(now){
     cctx.clearRect(0, 0, conf.width, conf.height);
-
     let alive = 0;
-    for (const p of confettiParticles) {
+    for (const p of confettiParticles){
       const age = now - p.born;
       if (age > p.life) continue;
       alive++;
@@ -482,23 +624,51 @@
       cctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.7);
       cctx.restore();
     }
-
     if (alive > 0) requestAnimationFrame(tickConfetti);
     else cctx.clearRect(0, 0, conf.width, conf.height);
   }
 
   // =============================
-  // Sound (winner ding)
+  // Sounds
   // =============================
   let audioCtx = null;
-  function ding() {
-    if (!soundOn) return;
-    try {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  function ensureAudio(){
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+
+  function clickTick(){
+    if (!soundOn || !clickOn) return;
+    try{
+      ensureAudio();
       const t0 = audioCtx.currentTime;
 
       const o = audioCtx.createOscillator();
       const g = audioCtx.createGain();
+
+      o.type = "square";
+      o.frequency.setValueAtTime(1200, t0);
+
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.08, t0 + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.03);
+
+      o.connect(g);
+      g.connect(audioCtx.destination);
+
+      o.start(t0);
+      o.stop(t0 + 0.04);
+    }catch{}
+  }
+
+  function ding(){
+    if (!soundOn || !dingOn) return;
+    try{
+      ensureAudio();
+      const t0 = audioCtx.currentTime;
+
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+
       o.type = "sine";
       o.frequency.setValueAtTime(880, t0);
       o.frequency.exponentialRampToValueAtTime(660, t0 + 0.12);
@@ -512,24 +682,48 @@
 
       o.start(t0);
       o.stop(t0 + 0.2);
-    } catch {}
+    }catch{}
+  }
+
+  let clickTimer = null;
+  function startClickLoop(durationMs){
+    if (!soundOn || !clickOn) return;
+    stopClickLoop();
+    const start = performance.now();
+
+    function schedule(){
+      const now = performance.now();
+      const t = Math.min(1, (now - start) / durationMs);
+
+      const interval = 60 + (t * t) * 220; // ~60ms -> ~280ms
+      clickTick();
+
+      if (t < 1 && spinning) {
+        clickTimer = setTimeout(schedule, interval);
+      }
+    }
+    schedule();
+  }
+  function stopClickLoop(){
+    if (clickTimer) {
+      clearTimeout(clickTimer);
+      clickTimer = null;
+    }
   }
 
   // =============================
   // Spin logic
   // =============================
-  function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+  function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
 
-  function setUIBusy(isBusy) {
-    spinBtn.disabled = isBusy;
+  function setUIBusy(isBusy){
     resetBtn.disabled = isBusy;
     settingsBtn.disabled = isBusy;
-
-    // edit button also depends on lock
+    installBtn.disabled = isBusy;
     editBtn.disabled = isBusy || lockEdit;
   }
 
-  function spin() {
+  function spin(){
     if (spinning) return;
     if (names.length < 2) { alert("Lägg till minst två namn."); return; }
 
@@ -546,7 +740,9 @@
     const duration = 3600;
     const start = performance.now();
 
-    function frame(now) {
+    startClickLoop(duration);
+
+    function frame(now){
       const t = Math.min(1, (now - start) / duration);
       const eased = easeOutCubic(t);
       currentAngle = startAngle + (targetAngle - startAngle) * eased;
@@ -556,6 +752,8 @@
       if (t < 1) {
         requestAnimationFrame(frame);
       } else {
+        stopClickLoop();
+
         const winner = pickWinner(currentAngle);
         highlightIndex = winner.idx;
         highlightUntil = performance.now() + 900;
@@ -563,12 +761,10 @@
         resultEl.innerHTML = `🎉 <span class="badge">Vinnare:</span> <strong>${escapeHtml(winner.name)}</strong>`;
         addToHistory(winner.name);
 
-        // celebratory effects
         startConfetti();
         ding();
 
-        // keep drawing briefly for highlight pulse
-        requestAnimationFrame(function pulseLoop(now2) {
+        requestAnimationFrame(function pulseLoop(){
           if (performance.now() < highlightUntil) {
             drawWheel(currentAngle);
             requestAnimationFrame(pulseLoop);
@@ -588,7 +784,7 @@
   // =============================
   // Tap center to spin
   // =============================
-  function canvasPointerPosition(evt) {
+  function canvasPointerPosition(evt){
     const rect = wheel.getBoundingClientRect();
     const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
     const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
@@ -597,11 +793,11 @@
     const y = (clientY - rect.top)  * (wheel.height / rect.height);
     return { x, y };
   }
-  function isInCenter(x, y) {
+  function isInCenter(x, y){
     const dx = x - cx, dy = y - cy;
     return Math.sqrt(dx*dx + dy*dy) <= CENTER_RADIUS;
   }
-  function handleWheelTap(evt) {
+  function handleWheelTap(evt){
     const { x, y } = canvasPointerPosition(evt);
     if (isInCenter(x, y)) {
       evt.preventDefault();
@@ -610,19 +806,34 @@
   }
 
   // =============================
+  // Panels
+  // =============================
+  function togglePanel(el){
+    const isOpen = el.style.display === "block";
+    el.style.display = isOpen ? "none" : "block";
+    if (!isOpen) el.scrollIntoView({ behavior:"smooth", block:"start" });
+  }
+  function closePanels(){
+    settings.style.display = "none";
+    editor.style.display = "none";
+    installHelp.style.display = "none";
+  }
+
+  // =============================
   // Editor
   // =============================
-  function openEditor() {
+  function openEditor(){
     if (lockEdit) return;
     nameInput.value = names.join("\n");
     editor.style.display = "block";
     settings.style.display = "none";
+    installHelp.style.display = "none";
     resultEl.textContent = "";
-    editor.scrollIntoView({ behavior: "smooth", block: "start" });
+    editor.scrollIntoView({ behavior:"smooth", block:"start" });
   }
-  function closeEditor() { editor.style.display = "none"; }
+  function closeEditor(){ editor.style.display = "none"; }
 
-  function saveFromEditor() {
+  function saveFromEditor(){
     let newNames = nameInput.value.split("\n").map(n => n.trim()).filter(Boolean);
 
     const unique = [];
@@ -634,70 +845,48 @@
     names = unique;
     saveNames(names);
     currentAngle = initialAngle();
+
     closeEditor();
     drawWheel(currentAngle);
   }
 
-  function resetNames() {
+  function resetNames(){
     names = [...DEFAULT_NAMES].slice(0, MAX_NAMES);
     saveNames(names);
     currentAngle = initialAngle();
+
     closeEditor();
     resultEl.textContent = "";
     drawWheel(currentAngle);
   }
 
   // =============================
-  // Settings + toggles
-  // =============================
-  function togglePanel(panelEl) {
-    const isOpen = panelEl.style.display === "block";
-    panelEl.style.display = isOpen ? "none" : "block";
-    if (!isOpen) panelEl.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  function setSwitch(sw, on) {
-    sw.dataset.on = on ? "true" : "false";
-    sw.setAttribute("aria-checked", on ? "true" : "false");
-  }
-
-  function toggleSwitch(sw, getterSetter) {
-    const current = sw.dataset.on === "true";
-    const next = !current;
-    setSwitch(sw, next);
-    getterSetter(next);
-  }
-
-  // =============================
   // History
   // =============================
-  function loadHistory() {
-    try {
+  function loadHistory(){
+    try{
       const raw = localStorage.getItem(K_HISTORY);
       const arr = raw ? JSON.parse(raw) : [];
       return Array.isArray(arr) ? arr.map(String) : [];
-    } catch { return []; }
+    }catch{ return []; }
   }
-  function saveHistory(arr) {
+  function saveHistory(arr){
     localStorage.setItem(K_HISTORY, JSON.stringify(arr));
   }
-
-  function addToHistory(name) {
+  function addToHistory(name){
     const h = loadHistory();
     h.unshift(name);
-    const trimmed = h.slice(0, 5);
-    saveHistory(trimmed);
+    saveHistory(h.slice(0,5));
     renderHistory();
   }
-
-  function renderHistory() {
+  function renderHistory(){
     if (!showHistory) {
       historyBox.style.display = "none";
       return;
     }
     const h = loadHistory();
     historyList.innerHTML = "";
-    for (const item of h) {
+    for (const item of h){
       const li = document.createElement("li");
       li.textContent = item;
       historyList.appendChild(li);
@@ -706,16 +895,27 @@
   }
 
   // =============================
-  // Safety
+  // Install prompt
   // =============================
-  function escapeHtml(s) {
-    return s.replace(/[&<>"']/g, c => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
-    }[c]));
+  let deferredPrompt = null;
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+  });
+
+  async function tryInstall(){
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      return;
+    }
+    installHelp.style.display = "block";
+    installHelp.scrollIntoView({ behavior:"smooth", block:"start" });
   }
 
   // =============================
-  // Service worker (PWA-ish)
+  // Service worker
   // =============================
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
@@ -724,24 +924,55 @@
   }
 
   // =============================
+  // Init
+  // =============================
+  themeSelect.value = themeMode;
+  applyTheme(themeMode);
+
+  setSwitch(soundSwitch, soundOn);
+  setSwitch(historySwitch, showHistory);
+  setSwitch(lockSwitch, lockEdit);
+  setSwitch(clickSwitch, clickOn);
+  setSwitch(dingSwitch, dingOn);
+
+  advanced.style.display = "none";
+  advHint.textContent = "Visa";
+
+  editBtn.disabled = lockEdit;
+  renderHistory();
+  drawWheel(currentAngle);
+
+  // =============================
   // Bind events
   // =============================
-  spinBtn.addEventListener("click", spin);
-  resetBtn.addEventListener("click", resetNames);
+  wheel.addEventListener("click", handleWheelTap);
+  wheel.addEventListener("touchstart", handleWheelTap, { passive:false });
+
   editBtn.addEventListener("click", openEditor);
+  resetBtn.addEventListener("click", resetNames);
 
   settingsBtn.addEventListener("click", () => {
-    closeEditor();
+    editor.style.display = "none";
+    installHelp.style.display = "none";
     togglePanel(settings);
+  });
+
+  installBtn.addEventListener("click", () => {
+    closePanels();
+    tryInstall();
   });
 
   saveBtn.addEventListener("click", saveFromEditor);
   cancelBtn.addEventListener("click", closeEditor);
 
-  wheel.addEventListener("click", handleWheelTap);
-  wheel.addEventListener("touchstart", handleWheelTap, { passive: false });
+  // Theme selection
+  themeSelect.addEventListener("change", () => {
+    themeMode = themeSelect.value; // system|light|dark
+    localStorage.setItem(K_THEME, themeMode);
+    applyTheme(themeMode);
+  });
 
-  // Switch toggles
+  // Switches
   soundSwitch.addEventListener("click", () => {
     toggleSwitch(soundSwitch, (v) => { soundOn = v; saveBool(K_SOUND, v); });
   });
@@ -758,18 +989,20 @@
     });
   });
 
-  // =============================
-  // Init UI state
-  // =============================
-  setSwitch(soundSwitch, soundOn);
-  setSwitch(historySwitch, showHistory);
-  setSwitch(lockSwitch, lockEdit);
+  // Advanced toggle
+  advToggle.addEventListener("click", () => {
+    const open = advanced.style.display === "block";
+    advanced.style.display = open ? "none" : "block";
+    advHint.textContent = open ? "Visa" : "Dölj";
+  });
 
-  editBtn.disabled = lockEdit;
-  renderHistory();
+  clickSwitch.addEventListener("click", () => {
+    toggleSwitch(clickSwitch, (v) => { clickOn = v; saveBool(K_CLICK, v); });
+  });
 
-  // First render
-  drawWheel(currentAngle);
+  dingSwitch.addEventListener("click", () => {
+    toggleSwitch(dingSwitch, (v) => { dingOn = v; saveBool(K_DING, v); });
+  });
 </script>
 </body>
 </html>
