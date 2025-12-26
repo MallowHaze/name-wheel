@@ -1,4 +1,4 @@
-const CACHE = "wheel-spin-cache-v1";
+const CACHE = "wheel-spin-cache-v2";
 const ASSETS = [
   "./",
   "./index.html",
